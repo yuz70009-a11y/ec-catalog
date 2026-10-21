@@ -1,8 +1,12 @@
+
 <?php
 /**
  * admin/item-delete.php ― 商品削除（POSTのみ受け付ける）
  */
 require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/auth.php';
+
+require_admin();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: item-list.php');
@@ -10,6 +14,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 $id = (int) ($_POST['id'] ?? 0);
+
 
 // 画像ファイルも一緒に削除する
 $stmt = $pdo->prepare('SELECT image FROM items WHERE id = ?');
