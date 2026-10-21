@@ -3,9 +3,16 @@
  * admin/item-add.php ― 商品登録（初級：テキスト項目のCRUD／中級：画像アップロード）
  */
 require_once __DIR__ . '/../../includes/config.php';
-require_once __DIR__ . '/../../includes/upload_helper.php';
+
+require_once __DIR__ . '/../../includes/auth.php';
+
+require_admin();
+
+
+
 
 $errors = [];
+
 $name = $price = $description = $stock = $category = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
