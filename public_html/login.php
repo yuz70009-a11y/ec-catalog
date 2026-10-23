@@ -39,6 +39,9 @@ session_start();
 
             <button type="submit">ログイン</button>
         </form>
+        <p>
+            <a href="register.php">はじめての方は会員登録</a>
+        </p>
     </main>
 </body>
 </html>
