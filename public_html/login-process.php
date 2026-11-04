@@ -21,7 +21,7 @@ $stmt->execute([$email]);
 $user = $stmt->fetch();
 
 // ② ユーザーが存在し、パスワードが一致した場合
-if ($user && $password === $user['password']) {
+if ($user && password_verify($password, $user['password'])) {
     session_regenerate_id(true);
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['role'] = $user['role'];

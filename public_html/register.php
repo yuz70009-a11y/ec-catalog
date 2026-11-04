@@ -61,9 +61,10 @@ unset($_SESSION['register_old']);
             </p>
 
             
+
 <p>
     <label>パスワード（8文字以上）<br>
-        <input type="password" name="password" required>
+        <input type="password" name="password" minlength="8" required>
     </label>
 
     <?php if (isset($errors['password'])): ?>
@@ -72,6 +73,7 @@ unset($_SESSION['register_old']);
         </small>
     <?php endif; ?>
 </p>
+
 
 <p>
     <label>パスワード（確認）<br>
