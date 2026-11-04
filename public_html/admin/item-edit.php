@@ -82,4 +82,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
     </main>
 </body>
+<header>
+    <a href="../index.php">Tsuchi-to-Hi</a>
+    <a class="btn" style="border: 1px solid; padding: .4rem .8rem;" href="../logout.php">ログアウト</a>
+</header>
 </html>
