@@ -75,12 +75,12 @@ if ($errors) {
     exit;
 }
 
-// データベースに登録
+// 登録：パスワードはハッシュ化してから保存する（元には戻せない）
+$hash = password_hash($password, PASSWORD_DEFAULT);
 $stmt = $pdo->prepare(
     'INSERT INTO users (email, password, name) VALUES (?, ?, ?)'
 );
-
-$stmt->execute([$email, $password, $name]);
+$stmt->execute([$email, $hash, $name]);
 
 // 登録完了画面へ移動
 header('Location: register-done.php');
