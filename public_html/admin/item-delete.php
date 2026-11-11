@@ -1,4 +1,3 @@
-
 <?php
 /**
  * admin/item-delete.php ― 商品削除（POSTのみ受け付ける）
@@ -15,7 +14,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $id = (int) ($_POST['id'] ?? 0);
 
-
 // 画像ファイルも一緒に削除する
 $stmt = $pdo->prepare('SELECT image FROM items WHERE id = ?');
 $stmt->execute([$id]);
@@ -27,7 +25,8 @@ if ($image) {
     }
 }
 
-// TODO（初級）: items テーブルから該当行を DELETE する（必ずプレースホルダを使うこと）
+$del = $pdo->prepare('DELETE FROM items WHERE id = ?');
+$del->execute([$id]);
 
 header('Location: item-list.php');
 exit;

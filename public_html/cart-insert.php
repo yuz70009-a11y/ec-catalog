@@ -2,7 +2,6 @@
 // 既習：DB接続・ログイン確認。HTML出力より前に実行する。
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/auth.php';
-
 require_login();
 $userId = (int) $_SESSION['user_id'];
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -37,7 +36,6 @@ $stmt = $pdo->prepare(
     'INSERT INTO cart (user_id, item_id, quantity) VALUES (?, ?, 1)'
 );
 $stmt->execute([$userId, $itemId]);
-
 $_SESSION['cart_message'] = 'カートに1個追加しました';
 header('Location: item.php?id=' . $itemId);
 exit;

@@ -3,6 +3,7 @@
  * item.php ― 商品詳細ページ
  */
 require_once __DIR__ . '/../includes/config.php';
+require_once __DIR__ . '/../includes/auth.php';
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -29,6 +30,9 @@ if (!$item) {
 <body>
     <header><a href="index.php">Tsuchi-to-Hi</a></header>
     <main>
+<?php if (isset($_SESSION['cart_message'])): ?>
+<p role="status"><?= htmlspecialchars($_SESSION['cart_message'], ENT_QUOTES, 'UTF-8') ?></p>
+<?php unset($_SESSION['cart_message']); endif; ?>
         <p><a href="items.php">← 商品一覧に戻る</a></p>
         <img src="<?= $item['image'] ? 'uploads/items/' . htmlspecialchars($item['image']) : 'https://placehold.co/400x260' ?>"
              alt="" style="max-width:100%; border-radius:8px;">
@@ -48,10 +52,6 @@ if (!$item) {
     <button>カートに入れる</button>
 </form>
 <p><a href="cart.php">カートを見る</a></p>
-
     </main>
-    <?php if (isset($_SESSION['cart_message'])): ?>
-<p role="status"><?= htmlspecialchars($_SESSION['cart_message'], ENT_QUOTES, 'UTF-8') ?></p>
-<?php unset($_SESSION['cart_message']); endif; ?>
 </body>
 </html>
