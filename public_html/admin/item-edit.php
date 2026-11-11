@@ -23,8 +23,15 @@ if (!$item) {
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // TODO（初級）: item-add.php と同様に、$_POST から値を取得しバリデーションする
-    $name = $price = $description = $stock = $category = '';
+    $name        = trim($_POST['name'] ?? '');
+    $price       = trim($_POST['price'] ?? '');
+    $description = trim($_POST['description'] ?? '');
+    $stock       = trim($_POST['stock'] ?? '');
+    $category    = trim($_POST['category'] ?? '');
+
+    if ($name === '')         $errors[] = '商品名を入力してください';
+    if (!ctype_digit($price)) $errors[] = '価格は0以上の整数で入力してください';
+    if (!ctype_digit($stock)) $errors[] = '在庫数は0以上の整数で入力してください';
 
     $filename = $item['image']; // 未変更ならそのまま維持
     if (empty($errors)) {
@@ -38,12 +45,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // TODO（初級）: items テーブルを UPDATE する（必ずプレースホルダを使うこと。WHERE id=? を忘れずに）
+        $upd = $pdo->prepare(
+            'UPDATE items SET name=?, price=?, description=?, image=?, stock=?, category=? WHERE id=?'
+        );
+        $upd->execute([$name, (int) $price, $description, $filename, (int) $stock, $category ?: null, $id]);
 
         header('Location: item-list.php');
         exit;
     }
 
+    // エラー時は入力値をそのまま画面へ戻す
     $item = array_merge($item, compact('name', 'price', 'description', 'stock', 'category'));
 }
 ?>
@@ -55,7 +66,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-    <header><a href="../index.php">Tsuchi-to-Hi</a></header>
+    <header>
+        <a href="../index.php">Tsuchi-to-Hi</a>
+        <a class="btn" style="border: 1px solid; padding: .4rem .8rem;" href="../logout.php">ログアウト</a>
+    </header>
     <main>
         <h1>商品編集</h1>
 
@@ -82,8 +96,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
     </main>
 </body>
-<header>
-    <a href="../index.php">Tsuchi-to-Hi</a>
-    <a class="btn" style="border: 1px solid; padding: .4rem .8rem;" href="../logout.php">ログアウト</a>
-</header>
 </html>

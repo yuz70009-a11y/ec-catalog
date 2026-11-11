@@ -1,87 +1,61 @@
-
 <?php
 /**
- * register-process.php ― 会員登録の処理
+ * register-process.php ― 会員登録の処理（画面は出さない。最後は必ずどこかへ移動する）
  */
-
-// データベース接続
 require_once __DIR__ . '/../includes/config.php';
 session_start();
 
-// POST以外のアクセスを禁止
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: register.php');
     exit;
 }
 
-// フォームから値を受け取る
-$name = trim($_POST['name'] ?? '');
-$email = trim($_POST['email'] ?? '');
+$name     = trim($_POST['name'] ?? '');
+$email    = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
-$confirm = $_POST['password_confirm'] ?? '';
+$confirm  = $_POST['password_confirm'] ?? '';
 
 $errors = [];
 
-// 必須チェック
-if ($name === '') {
-    $errors['name'] = '氏名を入力してください';
-}
+// 必須チェック：空なら理由を入れる（キーは項目名）
+if ($name === '')     $errors['name']     = '氏名を入力してください';
+if ($email === '')    $errors['email']    = 'メールアドレスを入力してください';
+if ($password === '') $errors['password'] = 'パスワードを入力してください';
 
-if ($email === '') {
-    $errors['email'] = 'メールアドレスを入力してください';
-}
-
-if ($password === '') {
-    $errors['password'] = 'パスワードを入力してください';
-}
-
-// メールアドレスの形式チェック
-if ($email !== '' &&
-    filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+// 形式チェック：メールアドレスらしい形か
+if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
     $errors['email'] = 'メールアドレスの形式が正しくありません';
 }
 
-/* パスワードの長さチェック */
+// パスワードの強さと、確認用との一致
 if ($password !== '' && mb_strlen($password) < 8) {
-    $errors['password'] =
-        'パスワードは8文字以上で入力してください';
+    $errors['password'] = 'パスワードは8文字以上で入力してください';
 }
-
-/* パスワード確認 */
 if ($password !== $confirm) {
-    $errors['password_confirm'] =
-        'パスワード（確認）が一致しません';
+    $errors['password_confirm'] = 'パスワード（確認）が一致しません';
 }
 
-/* メールアドレスの重複チェック */
+// 重複チェック：ほかのチェックが全部通ったときだけ DB に聞く
 if (!$errors) {
-    $stmt = $pdo->prepare(
-        'SELECT id FROM users WHERE email = ?'
-    );
-
+    $stmt = $pdo->prepare('SELECT id FROM users WHERE email = ?');
     $stmt->execute([$email]);
-
     if ($stmt->fetch()) {
-        $errors['email'] =
-            'このメールアドレスは既に登録されています';
+        $errors['email'] = 'このメールアドレスは既に登録されています';
     }
 }
 
-
-// エラーがあれば登録画面に戻す
+// 1つでもあれば、理由を預けて登録画面へ戻す
 if ($errors) {
     $_SESSION['register_errors'] = $errors;
+    $_SESSION['register_old']    = ['name' => $name, 'email' => $email];  // パスワードは戻さない
     header('Location: register.php');
     exit;
 }
 
 // 登録：パスワードはハッシュ化してから保存する（元には戻せない）
 $hash = password_hash($password, PASSWORD_DEFAULT);
-$stmt = $pdo->prepare(
-    'INSERT INTO users (email, password, name) VALUES (?, ?, ?)'
-);
+$stmt = $pdo->prepare('INSERT INTO users (email, password, name) VALUES (?, ?, ?)');
 $stmt->execute([$email, $hash, $name]);
 
-// 登録完了画面へ移動
 header('Location: register-done.php');
 exit;

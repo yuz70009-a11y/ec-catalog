@@ -1,25 +1,23 @@
-
 <?php
 /**
  * includes/auth.php ― ガード処理をまとめた共通ファイル（第9回・上級）
  *
- * require_login();  … ログインしている人だけ
- * require_admin();  … 管理者だけ
+ * 使い方：ページの先頭で読み込み、どちらか1行を呼ぶ。
+ *   require_login();  … ログインしている人だけ（会員限定ページ）
+ *   require_admin();  … 管理者だけ（admin フォルダのページ）
  */
-
-// Session がまだ始まっていなければ開始する
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// admin フォルダにいる場合は ../ を付ける
+// 今のページが admin フォルダの中なら、行き先を1つ上（../）から始める
 function app_path(string $file): string
 {
     $inAdmin = basename(dirname($_SERVER['SCRIPT_FILENAME'])) === 'admin';
     return ($inAdmin ? '../' : '') . $file;
 }
 
-// ① 認証：ログインしているか確認
+// 認証：ログインしていなければ、ログイン画面へ
 function require_login(): void
 {
     if (!isset($_SESSION['user_id'])) {
@@ -29,11 +27,10 @@ function require_login(): void
     }
 }
 
-// ② 認可：管理者か確認
+// 認可：ログインしていても、管理者でなければ「権限がありません」の画面へ
 function require_admin(): void
 {
     require_login();
-
     if (($_SESSION['role'] ?? '') !== 'admin') {
         header('Location: ' . app_path('forbidden.php'));
         exit;

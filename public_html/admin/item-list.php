@@ -10,7 +10,6 @@ require_once __DIR__ . '/../../includes/auth.php';
 
 require_admin();
 
-
 $items = $pdo->query('SELECT id, name, price, stock, category FROM items ORDER BY created_at DESC')->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -25,7 +24,6 @@ $items = $pdo->query('SELECT id, name, price, stock, category FROM items ORDER B
         <a href="../index.php">Tsuchi-to-Hi</a>
         <a class="btn" style="border: 1px solid; padding: .4rem .8rem;" href="../logout.php">ログアウト</a>
     </header>
-
     <main>
         <h1>商品管理</h1>
         <p><a class="btn" href="item-add.php">＋ 新規登録</a></p>

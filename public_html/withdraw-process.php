@@ -1,10 +1,5 @@
 <?php
-/**
- * withdraw-process.php ― 退会の処理（第12回 配布）
- *
- * ⚠ ログインしているか（＝セッションに user_id があるか）しか見ていない。
- *    だから、どこから送られたフォームでも受け付けてしまう（CSRF）。
- */
+// 退会処理：第12回の認証・CSRF確認と、関連データの後片付け。
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/auth.php';
 
@@ -15,18 +10,28 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
- // CSRF 対策：セッションのトークンと送信されたトークンを比較する
+// CSRF 対策：セッションのトークンと、送られてきたトークンが一致しなければ止める
 $sent  = $_POST['csrf_token'] ?? '';
 $saved = $_SESSION['csrf_token'] ?? '';
-
 if (!is_string($sent) || $saved === '' || !hash_equals($saved, $sent)) {
     http_response_code(400);
     exit('不正なリクエストです');
 }
 
-// 会員を削除する（書いたレビューも一緒に消える）
-$stmt = $pdo->prepare('DELETE FROM users WHERE id = ?');
-$stmt->execute([$_SESSION['user_id']]);
+// 第16回までの関連データも先に削除する。レビューはON DELETE CASCADEで消える。
+$pdo->beginTransaction();
+try {
+    $stmt = $pdo->prepare('DELETE FROM cart WHERE user_id = ?');
+    $stmt->execute([$_SESSION['user_id']]);
+    $stmt = $pdo->prepare('DELETE FROM favorites WHERE user_id = ?');
+    $stmt->execute([$_SESSION['user_id']]);
+    $stmt = $pdo->prepare('DELETE FROM users WHERE id = ?');
+    $stmt->execute([$_SESSION['user_id']]);
+    $pdo->commit();
+} catch (Throwable $e) {
+    $pdo->rollBack();
+    throw $e;
+}
 
 // ログアウトと同じく、セッションを捨てる
 $_SESSION = [];

@@ -3,40 +3,24 @@
  * admin/item-add.php ― 商品登録（初級：テキスト項目のCRUD／中級：画像アップロード）
  */
 require_once __DIR__ . '/../../includes/config.php';
-
+require_once __DIR__ . '/../../includes/upload_helper.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 require_admin();
 
-
-
-
 $errors = [];
-
 $name = $price = $description = $stock = $category = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // TODO（初級）: $_POST から name, price, description, stock, category を取得する（trim すること）
-    $name = trim($_POST['name'] ?? '');
-    $price = trim($_POST['price'] ?? '');
+    $name        = trim($_POST['name'] ?? '');
+    $price       = trim($_POST['price'] ?? '');
     $description = trim($_POST['description'] ?? '');
-    $stock = trim($_POST['stock'] ?? '');
-    $category = trim($_POST['category'] ?? '');
-    // TODO（初級）: 入力内容の基本チェック
-    //   name が空、price/stock が数字でない場合はそれぞれ $errors[] にメッセージを追加する
-    if ($name === '') {
-        $errors[] = '商品名を入力してください。';
-    }
-    if ($price === '') {
-        $errors[] = '価格を入力してください。';
-    } elseif (!is_numeric($price)) {
-        $errors[] = '価格は数字で入力してください。';
-    }
-    if ($stock === '') {
-        $errors[] = '在庫数を入力してください。';
-    } elseif (!is_numeric($stock)) {
-        $errors[] = '在庫数は数字で入力してください。';
-    }
+    $stock       = trim($_POST['stock'] ?? '');
+    $category    = trim($_POST['category'] ?? '');
+
+    if ($name === '')                       $errors[] = '商品名を入力してください';
+    if (!ctype_digit($price))               $errors[] = '価格は0以上の整数で入力してください';
+    if (!ctype_digit($stock))               $errors[] = '在庫数は0以上の整数で入力してください';
 
     $filename = null;
     if (empty($errors)) {
@@ -50,16 +34,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (empty($errors)) {
-        // TODO（初級）: items テーブルへ INSERT する（必ずプレースホルダを使うこと）
-        $stmt =$Pdo->$_COOKIEprepare('INSERT INTO items (name, price, description, stock, category, image) VALUES (:name, :price, :description, :stock, :category, :image)');
-        $stmt->execute([
-            ':name' => $name,
-            ':price' => $price,
-            ':description' => $description,
-            ':stock' => $stock,
-            ':category' => $category,
-            ':image' => $filename,
-        ]);
+        $stmt = $pdo->prepare(
+            'INSERT INTO items (name, price, description, image, stock, category) VALUES (?, ?, ?, ?, ?, ?)'
+        );
+        $stmt->execute([$name, (int) $price, $description, $filename, (int) $stock, $category ?: null]);
 
         header('Location: item-list.php');
         exit;
@@ -74,7 +52,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="../assets/css/style.css">
 </head>
 <body>
-    <header><a href="../index.php">Tsuchi-to-Hi</a></header>
+    <header>
+        <a href="../index.php">Tsuchi-to-Hi</a>
+        <a class="btn" style="border: 1px solid; padding: .4rem .8rem;" href="../logout.php">ログアウト</a>
+    </header>
     <main>
         <h1>商品登録</h1>
 
@@ -97,9 +78,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </form>
     </main>
 </body>
-<header>
-    <a href="../index.php">Tsuchi-to-Hi</a>
-    <a class="btn" style="border: 1px solid; padding: .4rem .8rem;" href="../logout.php">ログアウト</a>
-</header>
-
 </html>
