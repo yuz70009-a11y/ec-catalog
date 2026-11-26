@@ -11,7 +11,7 @@ if (!isset($_SESSION['csrf_token'])) {
 }
 
 $stmt = $pdo->prepare(
-    'SELECT cart.id, cart.quantity, items.name, items.price
+    'SELECT cart.id, cart.item_id, cart.quantity, items.name, items.price, items.stock
      FROM cart JOIN items ON cart.item_id = items.id
      WHERE cart.user_id = ? ORDER BY cart.id'
 );
@@ -21,7 +21,10 @@ $cartItems = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 
 $total = 0;
+$itemQuantities = [];
 foreach ($cartItems as $row) {
+    $itemId = (int) $row['item_id'];
+    $itemQuantities[$itemId] = ($itemQuantities[$itemId] ?? 0) + (int) $row['quantity'];
     $subtotal = (int) $row['price'] * (int) $row['quantity'];
     $total += $subtotal;
 }
@@ -58,7 +61,7 @@ foreach ($cartItems as $row) {
         }
     </style>
 </head>
-<<body>
+<body>
     <header>
         <a href="items.php">Tsuchi-to-Hi</a>
     </header>
@@ -89,7 +92,12 @@ foreach ($cartItems as $row) {
                                 <form action="cart-update.php" method="post">
                                     <input type="hidden" name="cart_id" value="<?= (int) $row['id'] ?>">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8') ?>">
-                                    <input aria-label="数量" type="number" name="quantity" min="1" max="2147483647" value="<?= (int) $row['quantity'] ?>" required>
+                                    <?php $available = max(0, (int) $row['stock'] - ($itemQuantities[(int) $row['item_id']] - (int) $row['quantity'])); ?>
+                                    <input aria-label="数量" type="number" name="quantity" min="1" max="<?= $available ?>" value="<?= (int) $row['quantity'] ?>" required>
+                                    <small>在庫 <?= (int) $row['stock'] ?>点</small>
+                                    <?php if ($itemQuantities[(int) $row['item_id']] > (int) $row['stock']): ?>
+                                        <p role="alert">在庫が不足しています。数量を減らすか、この行を削除してください。</p>
+                                    <?php endif; ?>
                                     <button>更新</button>
                                 </form>
                             </td>
