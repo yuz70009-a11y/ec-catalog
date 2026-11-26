@@ -44,10 +44,51 @@ if (
 }
 
 
-$stmt = $pdo->prepare(
-    'UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?'
-);
-$stmt->execute([$quantity, $cartId, $userId]);
+try {
+    $find = $pdo->prepare('SELECT item_id FROM cart WHERE id = ? AND user_id = ?');
+    $find->execute([$cartId, $userId]);
+    $itemId = $find->fetchColumn();
+    if ($itemId === false) {
+        http_response_code(404);
+        exit('カートの商品が見つかりません。');
+    }
+    $pdo->beginTransaction();
+    $stockQuery = $pdo->prepare('SELECT stock FROM items WHERE id = ? FOR UPDATE');
+    $stockQuery->execute([$itemId]);
+    $stock = $stockQuery->fetchColumn();
+    $rows = $pdo->prepare(
+        'SELECT id, quantity FROM cart WHERE user_id = ? AND item_id = ? FOR UPDATE'
+    );
+    $rows->execute([$userId, $itemId]);
+    $otherQuantity = 0;
+    $found = false;
+    foreach ($rows->fetchAll() as $row) {
+        if ((int) $row['id'] === $cartId) {
+            $found = true;
+        } else {
+            $otherQuantity += (int) $row['quantity'];
+        }
+    }
+    if (!$found || $stock === false) {
+        $pdo->rollBack();
+        http_response_code(404);
+        exit('カートの商品が見つかりません。');
+    }
+    if ($quantity + $otherQuantity > (int) $stock) {
+        $pdo->rollBack();
+        http_response_code(409);
+        exit('在庫が不足しています。数量を減らしてから更新してください。');
+    }
+    $stmt = $pdo->prepare('UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?');
+    $stmt->execute([$quantity, $cartId, $userId]);
+    $pdo->commit();
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    http_response_code(500);
+    exit('数量の更新に失敗しました。もう一度お試しください。');
+}
 
 header('Location: cart.php');
 exit;

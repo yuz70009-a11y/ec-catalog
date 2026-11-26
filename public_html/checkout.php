@@ -37,12 +37,40 @@ try {
         exit;
     }
     if (!$cartItems) {
+        if ($isPost) {
+            $pdo->rollBack();
+        }
         header('Location: cart.php', true, 303);
         exit;
     }
     $total = 0;
+    $quantities = [];
     foreach ($cartItems as $row) {
+        if ((int) $row['quantity'] < 1) {
+            if ($isPost) {
+                $pdo->rollBack();
+            }
+            http_response_code(400);
+            exit('カートの数量を確認してください。');
+        }
+        $itemId = (int) $row['item_id'];
+        $quantities[$itemId] = ($quantities[$itemId] ?? 0) + (int) $row['quantity'];
         $total += (int) $row['price'] * (int) $row['quantity'];
+    }
+    // 確認時と注文確定時の両方で、商品ごとの合計数量と最新の在庫を比較する。
+    ksort($quantities);
+    $stockQuery = $pdo->prepare('SELECT stock FROM items WHERE id = ?' . ($isPost ? ' FOR UPDATE' : ''));
+    foreach ($quantities as $itemId => $quantity) {
+        $stockQuery->execute([$itemId]);
+        $stock = $stockQuery->fetchColumn();
+        if ($stock === false || $quantity > (int) $stock) {
+            if ($isPost) {
+                $pdo->rollBack();
+            }
+            unset($_SESSION['checkout']);
+            http_response_code(409);
+            exit('在庫が不足しています。カートに戻って数量を減らしてください。<p><a href="cart.php">カートに戻る</a></p>');
+        }
     }
     if ($total > 2147483647 || $total < 0) {
         if ($isPost) {
@@ -53,6 +81,17 @@ try {
     }
 
     if ($isPost) {
+        // 注文・明細・在庫減算・カート削除をまとめて確定する。
+        $decrement = $pdo->prepare('UPDATE items SET stock = stock - ? WHERE id = ? AND stock >= ?');
+        foreach ($quantities as $itemId => $quantity) {
+            $decrement->execute([$quantity, $itemId, $quantity]);
+            if ($decrement->rowCount() !== 1) {
+                $pdo->rollBack();
+                unset($_SESSION['checkout']);
+                http_response_code(409);
+                exit('在庫が不足しています。カートからやり直してください。');
+            }
+        }
         $order = $pdo->prepare('INSERT INTO orders (user_id, total_price) VALUES (?, ?)');
         $order->execute([$userId, $total]);
         $orderId = (int) $pdo->lastInsertId();

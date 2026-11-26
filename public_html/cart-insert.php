@@ -26,16 +26,39 @@ if ($itemId === false || $itemId === null) {
     http_response_code(400);
     exit('商品IDを確認してください');
 }
-$check = $pdo->prepare('SELECT id FROM items WHERE id = ?');
-$check->execute([$itemId]);
-if (!$check->fetch()) {
-    http_response_code(404);
-    exit('商品が見つかりません');
+try {
+    $pdo->beginTransaction();
+    $check = $pdo->prepare('SELECT stock FROM items WHERE id = ? FOR UPDATE');
+    $check->execute([$itemId]);
+    $item = $check->fetch();
+    if (!$item) {
+        $pdo->rollBack();
+        http_response_code(404);
+        exit('商品が見つかりません');
+    }
+    // 同じ商品が複数行ある既存のカートでも、合計数量で確認する。
+    $checkCart = $pdo->prepare(
+        'SELECT quantity FROM cart WHERE user_id = ? AND item_id = ? FOR UPDATE'
+    );
+    $checkCart->execute([$userId, $itemId]);
+    $inCart = array_sum(array_column($checkCart->fetchAll(), 'quantity'));
+    if ($inCart + 1 > (int) $item['stock']) {
+        $pdo->rollBack();
+        http_response_code(409);
+        exit('在庫が不足しています。カートの数量を確認してください。');
+    }
+    $stmt = $pdo->prepare(
+        'INSERT INTO cart (user_id, item_id, quantity) VALUES (?, ?, 1)'
+    );
+    $stmt->execute([$userId, $itemId]);
+    $pdo->commit();
+} catch (PDOException $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
+    http_response_code(500);
+    exit('カートへの追加に失敗しました。もう一度お試しください。');
 }
-$stmt = $pdo->prepare(
-    'INSERT INTO cart (user_id, item_id, quantity) VALUES (?, ?, 1)'
-);
-$stmt->execute([$userId, $itemId]);
 $_SESSION['cart_message'] = 'カートに1個追加しました';
 header('Location: item.php?id=' . $itemId);
 exit;
